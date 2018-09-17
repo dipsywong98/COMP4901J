@@ -76,6 +76,9 @@ class TwoLayerNet(object):
     # Store the result in the scores variable, which should be an array of      #
     # shape (N, C).                                                             #
     #############################################################################
+    L1 = X.dot(W1) + b1
+    H = np.maximum(0,L1)
+    scores = H.dot(W2) + b2
     pass
     #############################################################################
     #                              END OF YOUR CODE                             #
@@ -93,6 +96,15 @@ class TwoLayerNet(object):
     # in the variable loss, which should be a scalar. Use the Softmax           #
     # classifier loss.                                                          #
     #############################################################################
+    num_train = X.shape[0]
+    scores -= np.max(scores,axis=1,keepdims=True)
+    exp_scores = np.exp(scores)
+    sums = np.sum(exp_scores,axis=1)
+    probs = exp_scores/sums.reshape(-1,1)
+    probi = exp_scores[np.arange(num_train),y]/sums
+    loss = np.sum(-np.log(probi))
+    loss /= num_train 
+    loss += reg*0.5*(np.sum(W1*W1)+np.sum(W2*W2))
     pass
     #############################################################################
     #                              END OF YOUR CODE                             #
@@ -105,7 +117,55 @@ class TwoLayerNet(object):
     # and biases. Store the results in the grads dictionary. For example,       #
     # grads['W1'] should store the gradient on W1, and be a matrix of same size #
     #############################################################################
-    pass
+    # pass
+
+    dscores = probs
+    dscores[range(N), y] -= 1
+    dscores /= N
+    grads['W2'] = H.T.dot(dscores)
+
+    # dLoss/dB2 = dLoss/dScores * dScores/dB2
+    #             dscores       * 1
+    grads['b2'] = dscores.sum(axis=0)
+
+    # dLoss/dHidden = dLoss/dScores * dScores/dHidden
+    #               = dscores       * W2
+    dHidden = dscores.dot(W2.T)
+
+    # hidden_scores = max(0, layer1scores)
+    # dLoss/dlayer1scores = dLoss/dHidden * dHidden/dLayer1Scores
+    # dHidden/dLayer1Scores = 1 if layer1Scores > 0, 0 otherwise
+    dHidden_dLayer1 = np.zeros_like(L1)
+    dHidden_dLayer1[L1 > 0] = 1
+    # dLayer1scores = dHidden * dHidden_dLayer1
+    # note this is an element wise multiply
+    dLayer1Scores = dHidden * dHidden_dLayer1
+
+    # Layer1Scores = W1 * X + B1
+    # dLoss/dW1 = dLoss/dLayer1Scores * dLayer1Scores/dW1
+    #           = dLayer1Scores * X
+    grads['W1'] = X.T.dot(dLayer1Scores)
+
+    # dLoss/dB1 = dLoss/dLayer1Scores * dLayer1Scores/B1
+    #           = dLayer1Scores * 1
+    grads['b1'] = dLayer1Scores.sum(axis=0)
+
+    # gradient due to the regularization term on the loss function
+    grads['W1'] += reg * W1
+    grads['W2'] += reg * W2
+
+
+    mask = np.zeros(exp_scores.shape)
+    mask[np.arange(N),y] = 1
+    sums = sums.reshape(N,1)
+    p = exp_scores / sums
+    d = p - mask
+
+    B = np.full((N,1), 1.0)
+    grads['W2'] = H.T.dot(d)#HxN*NxC
+
+    grads['W2'] += reg*W2
+    grads['W2'] /= N
     #############################################################################
     #                              END OF YOUR CODE                             #
     #############################################################################
