@@ -1,6 +1,3 @@
-from __future__ import print_function
-from past.builtins import xrange
-
 import matplotlib
 import numpy as np
 from scipy.ndimage import uniform_filter
@@ -12,14 +9,12 @@ def extract_features(imgs, feature_fns, verbose=False):
   single images, apply all feature functions to all images, concatenating the
   feature vectors for each image and storing the features for all images in
   a single matrix.
-
   Inputs:
   - imgs: N x H X W X C array of pixel data for N images.
   - feature_fns: List of k feature functions. The ith feature function should
     take as input an H x W x D array and return a (one-dimensional) array of
     length F_i.
   - verbose: Boolean; if true, print progress.
-
   Returns:
   An array of shape (N, F_1 + ... + F_k) where each column is the concatenation
   of all features for a single image.
@@ -44,7 +39,7 @@ def extract_features(imgs, feature_fns, verbose=False):
   imgs_features[0] = np.hstack(first_image_features).T
 
   # Extract features for the rest of the images.
-  for i in xrange(1, num_images):
+  for i in range(1, num_images):
     idx = 0
     for feature_fn, feature_dim in zip(feature_fns, feature_dims):
       next_idx = idx + feature_dim
@@ -58,10 +53,8 @@ def extract_features(imgs, feature_fns, verbose=False):
 
 def rgb2gray(rgb):
   """Convert RGB image to grayscale
-
     Parameters:
       rgb : RGB image
-
     Returns:
       gray : grayscale image
   
@@ -118,7 +111,7 @@ def hog_feature(im):
     # select magnitudes for those orientations
     cond2 = temp_ori > 0
     temp_mag = np.where(cond2, grad_mag, 0)
-    orientation_histogram[:,:,i] = uniform_filter(temp_mag, size=(cx, cy))[cx/2::cx, cy/2::cy].T
+    orientation_histogram[:,:,int(i)] = uniform_filter(temp_mag, size=(cx, cy))[cx//2::cx, cy//2::cy].T
   
   return orientation_histogram.ravel()
 
@@ -126,14 +119,12 @@ def hog_feature(im):
 def color_histogram_hsv(im, nbin=10, xmin=0, xmax=255, normalized=True):
   """
   Compute color histogram for an image using hue.
-
   Inputs:
   - im: H x W x C array of pixel data for an RGB image.
   - nbin: Number of histogram bins. (default: 10)
   - xmin: Minimum pixel value (default: 0)
   - xmax: Maximum pixel value (default: 255)
   - normalized: Whether to normalize the histogram (default: True)
-
   Returns:
     1D vector of length nbin giving the color histogram over the hue of the
     input image.
@@ -147,5 +138,3 @@ def color_histogram_hsv(im, nbin=10, xmin=0, xmax=255, normalized=True):
   # return histogram
   return imhist
 
-
-pass

@@ -118,54 +118,36 @@ class TwoLayerNet(object):
     # grads['W1'] should store the gradient on W1, and be a matrix of same size #
     #############################################################################
     # pass
+    # mask = np.zeros(exp_scores.shape)
+    # mask[np.arange(N),y] = 1
+    # sums = sums.reshape(N,1)
+    # p = exp_scores / sums
+    # d = p - mask
+
+    # B = np.full((N,1), 1.0)
+    # grads['W2'] = H.T.dot(d)#HxN*NxC
+    # grads['b2'] = B.T.dot(d)
+
+    # grads['W2'] /= N
+    # grads['W2'] += reg*W2
+    # grads['b2'] /= N
 
     dscores = probs
     dscores[range(N), y] -= 1
     dscores /= N
     grads['W2'] = H.T.dot(dscores)
 
-    # dLoss/dB2 = dLoss/dScores * dScores/dB2
-    #             dscores       * 1
     grads['b2'] = dscores.sum(axis=0)
+    dH = dscores.dot(W2.T)
+    dH_dL1 = np.zeros(L1.shape)
+    dH_dL1[L1 > 0] = 1
+    dL1scores = dH * dH_dL1
 
-    # dLoss/dHidden = dLoss/dScores * dScores/dHidden
-    #               = dscores       * W2
-    dHidden = dscores.dot(W2.T)
+    grads['W1'] = X.T.dot(dL1scores)
+    grads['b1'] = dL1scores.sum(axis=0)
 
-    # hidden_scores = max(0, layer1scores)
-    # dLoss/dlayer1scores = dLoss/dHidden * dHidden/dLayer1Scores
-    # dHidden/dLayer1Scores = 1 if layer1Scores > 0, 0 otherwise
-    dHidden_dLayer1 = np.zeros_like(L1)
-    dHidden_dLayer1[L1 > 0] = 1
-    # dLayer1scores = dHidden * dHidden_dLayer1
-    # note this is an element wise multiply
-    dLayer1Scores = dHidden * dHidden_dLayer1
-
-    # Layer1Scores = W1 * X + B1
-    # dLoss/dW1 = dLoss/dLayer1Scores * dLayer1Scores/dW1
-    #           = dLayer1Scores * X
-    grads['W1'] = X.T.dot(dLayer1Scores)
-
-    # dLoss/dB1 = dLoss/dLayer1Scores * dLayer1Scores/B1
-    #           = dLayer1Scores * 1
-    grads['b1'] = dLayer1Scores.sum(axis=0)
-
-    # gradient due to the regularization term on the loss function
     grads['W1'] += reg * W1
     grads['W2'] += reg * W2
-
-
-    mask = np.zeros(exp_scores.shape)
-    mask[np.arange(N),y] = 1
-    sums = sums.reshape(N,1)
-    p = exp_scores / sums
-    d = p - mask
-
-    B = np.full((N,1), 1.0)
-    grads['W2'] = H.T.dot(d)#HxN*NxC
-
-    grads['W2'] += reg*W2
-    grads['W2'] /= N
     #############################################################################
     #                              END OF YOUR CODE                             #
     #############################################################################
@@ -210,6 +192,11 @@ class TwoLayerNet(object):
       # them in X_batch and y_batch respectively.                             #
       #########################################################################
       pass
+      mask = np.random.choice(np.arange(num_train),batch_size,replace=True)
+      # print(mask.shape)
+      X_batch = X[mask]
+      y_batch = y[mask]
+      # print(X_batch.shape, y_batch.shape)
       #########################################################################
       #                             END OF YOUR CODE                          #
       #########################################################################
@@ -225,6 +212,10 @@ class TwoLayerNet(object):
       # stored in the grads dictionary defined above.                         #
       #########################################################################
       pass
+      self.params['W1'] -= learning_rate*grads['W1']
+      self.params['b1'] -= learning_rate*grads['b1']
+      self.params['W2'] -= learning_rate*grads['W2']
+      self.params['b2'] -= learning_rate*grads['b2']
       #########################################################################
       #                             END OF YOUR CODE                          #
       #########################################################################
@@ -270,6 +261,14 @@ class TwoLayerNet(object):
     # TODO: Implement this function; it should be VERY simple!                #
     ###########################################################################
     pass
+    W1 = self.params['W1']
+    b1 = self.params['b1']
+    W2 = self.params['W2']
+    b2 = self.params['b2']
+    L1 = X.dot(W1) + b1
+    H = np.maximum(0,L1)
+    scores = H.dot(W2) + b2
+    y_pred = np.argmax(scores,axis=1)
     ###########################################################################
     #                              END OF YOUR CODE                           #
     ###########################################################################
