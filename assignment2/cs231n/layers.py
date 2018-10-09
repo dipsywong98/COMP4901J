@@ -20,7 +20,7 @@ def affine_forward(x, w, b):
     - out: output, of shape (N, M)
     - cache: (x, w, b)
     """
-    out = None
+    out = x.reshape((x.shape[0],-1)).dot(w)+b
     ###########################################################################
     # TODO: Implement the affine forward pass. Store the result in out. You   #
     # will need to reshape the input into rows.                               #
@@ -54,6 +54,9 @@ def affine_backward(dout, cache):
     # TODO: Implement the affine backward pass.                               #
     ###########################################################################
     pass
+    db = dout.sum(axis=0)
+    dx = dout.dot(w.T).reshape(x.shape)
+    dw = x.reshape(x.shape[0],-1).T.dot(dout)
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -75,6 +78,7 @@ def relu_forward(x):
     ###########################################################################
     # TODO: Implement the ReLU forward pass.                                  #
     ###########################################################################
+    out = np.maximum(x,0)
     pass
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -98,6 +102,7 @@ def relu_backward(dout, cache):
     ###########################################################################
     # TODO: Implement the ReLU backward pass.                                 #
     ###########################################################################
+    dx=(x>0)*dout
     pass
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -169,6 +174,8 @@ def batchnorm_forward(x, gamma, beta, bn_param):
         # variables.                                                          #
         #######################################################################
         pass
+        # running_mean = momentum * running_mean + (1 - momentum) * sample_mean
+        # running_var = momentum * running_var + (1 - momentum) * sample_var
         #######################################################################
         #                           END OF YOUR CODE                          #
         #######################################################################
