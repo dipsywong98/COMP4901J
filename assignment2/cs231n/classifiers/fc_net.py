@@ -251,14 +251,16 @@ class FullyConnectedNet(object):
         # layer, etc.                                                              #
         ############################################################################
         pass
-        caches = {}
-        values = {}
-        values[0] = X.reshape(X.shape[0],-1)
+        h_caches = {}
+        r_caches = {}
+        h_values = {}
+        r_values = {}
+        r_values[0] = X.reshape(X.shape[0],-1)
         k=self.num_layers//2+4
         for i in range(1,self.num_layers+1,1):
-            values[i+k],caches[i+k] = affine_forward(values[i-1],self.params['W%d'%i],self.params['b%d'%i]) #hi
-            values[i],caches[i] = relu_forward(values[i+k]) #relui
-        scores = values[self.num_layers+k]
+            h_values[i],h_caches[i] = affine_forward(r_values[i-1],self.params['W%d'%i],self.params['b%d'%i]) #hi
+            r_values[i],r_caches[i] = relu_forward(h_values[i]) #relui
+        scores = h_values[self.num_layers]
 
         # print(k,values.keys())
         ############################################################################
@@ -284,12 +286,13 @@ class FullyConnectedNet(object):
         # of 0.5 to simplify the expression for the gradient.                      #
         ############################################################################
         pass
-        d = {}
+        dh = {}
+        dr = {}
         dW = {}
         db = {}
         s = 0
         # print(self.num_layers+k)
-        loss, d[self.num_layers+k] = softmax_loss(scores, y)
+        loss, dh[self.num_layers] = softmax_loss(scores, y)
 
         # loss, dscores = softmax_loss(scores, y)
         # h3 = scores, dh3 = dscores
@@ -301,13 +304,13 @@ class FullyConnectedNet(object):
 
         for i in range(self.num_layers,0,-1):
             # print(i)
-            d[i-1],dW[i],grads["b%d"%i] = affine_backward(d[k+i],caches[k+i])
+            dr[i-1],dW[i],grads["b%d"%i] = affine_backward(dh[i],h_caches[i])
             W = self.params['W%d'%i]
             loss += self.reg*0.5*np.sum(W*W)
             dW[i] += self.reg*W
             grads["W%d"%i] = dW[i]
             if i-1 == 0: break
-            d[k+i-1] = relu_backward(d[i-1],caches[i-1])
+            dh[i-1] = relu_backward(dr[i-1],r_caches[i-1])
 
         # print(d.keys(),dW.keys())
 
@@ -315,9 +318,9 @@ class FullyConnectedNet(object):
 
         # for i in range(self.num_layers,0,-1):
         #     print(i,d[k+i].shape)
-        #     d[i],dW[i],db[i] = affine_backward(d[k+i],caches[k+i])
-        #     print(i,d[i].shape,caches[i].shape)
-        #     d[k+i-1] = relu_backward(d[i],caches[i])
+        #     d[i],dW[i],db[i] = affine_backward(d[k+i],h_caches[k+i])
+        #     print(i,d[i].shape,h_caches[i].shape)
+        #     d[k+i-1] = relu_backward(d[i],h_caches[i])
 
         # for i in range(self.num_layers):
         #     W = self.params['W%d'%(i+1)]
