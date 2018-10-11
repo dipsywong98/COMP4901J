@@ -89,7 +89,7 @@ class TwoLayerNet(object):
         reg = self.reg
         hi, hi_cache = affine_forward(X.reshape((X.shape[0],-1)),W1,b1)
         relu_out, relu_cache = relu_forward(hi)
-        scores, scores_cache = affine_forward(hi,W2,b2)
+        scores, scores_cache = affine_forward(relu_out,W2,b2)
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
@@ -188,10 +188,11 @@ class FullyConnectedNet(object):
         # parameters should be initialized to zero.                                #
         ############################################################################
         pass
-        self.dims = [input_dims,*hidden_dims,num_classes]
-        for i in range(len(self.dims)):
-            self.params['W'+(i+1)] = np.random.normal(scale=weight_scale,size=(self.dims[i],self.dims[i+1]))
-            self.params['b'+(i+1)] = np.zeros(self.dims[i+1])
+        self.dims = [input_dim,*hidden_dims,num_classes]
+        for i in range(len(self.dims)-1):
+            self.params['W%d'%(i+1)] = np.random.normal(scale=weight_scale,size=(self.dims[i],self.dims[i+1]))
+            self.params['b%d'%(i+1)] = np.zeros(self.dims[i+1])
+        # print(self.params['W1'].shape,self.params['W2'].shape)
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
@@ -250,6 +251,15 @@ class FullyConnectedNet(object):
         # layer, etc.                                                              #
         ############################################################################
         pass
+        caches = {}
+        values = {}
+        values[0] = X.reshape(X.shape[0],-1)
+        k=self.num_layers//2
+        for i in range(1,self.num_layers+1,1):
+            # print(i,values[i-1].shape,self.params['W%d'%i].shape,self.params['b%d'%i].shape)
+            values[i+k],caches[i+k] = affine_forward(values[i-1],self.params['W%d'%i],self.params['b%d'%i])
+            values[i],caches[i] = relu_forward(values[i+k])
+        scores = values[self.num_layers+k]
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
@@ -273,6 +283,30 @@ class FullyConnectedNet(object):
         # of 0.5 to simplify the expression for the gradient.                      #
         ############################################################################
         pass
+        d = {}
+        dW = {}
+        db = {}
+        s = 0
+        loss, d[self.num_layers+k] = softmax_loss(scores, y)
+
+        # loss, dscores = softmax_loss(scores, y)
+        # drelu, dW2, db2 = affine_backward(dscores, scores_cache)
+        # dhi = relu_backward(drelu, relu_cache)
+        # dX, dW1, db1 = affine_backward(dhi, hi_cache)
+
+
+        # for i in range(self.num_layers-1,0,-1):
+        #     print(i,d[k+i].shape)
+        #     d[i],dW[i],db[i] = affine_backward(d[k+i],caches[k+i])
+        #     print(i,d[i].shape,caches[i].shape)
+        #     d[k+i-1] = relu_backward(d[i],caches[i])
+
+        for i in range(self.num_layers):
+            W = self.params['W%d'%(i+1)]
+            s+=np.sum(W*W)
+        #     dW[i] += self.reg*W
+        
+        loss += self.reg*0.5*s
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
