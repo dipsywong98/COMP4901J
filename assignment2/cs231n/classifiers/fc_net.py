@@ -254,12 +254,13 @@ class FullyConnectedNet(object):
         caches = {}
         values = {}
         values[0] = X.reshape(X.shape[0],-1)
-        k=self.num_layers//2
+        k=self.num_layers//2+4
         for i in range(1,self.num_layers+1,1):
-            # print(i,values[i-1].shape,self.params['W%d'%i].shape,self.params['b%d'%i].shape)
-            values[i+k],caches[i+k] = affine_forward(values[i-1],self.params['W%d'%i],self.params['b%d'%i])
-            values[i],caches[i] = relu_forward(values[i+k])
+            values[i+k],caches[i+k] = affine_forward(values[i-1],self.params['W%d'%i],self.params['b%d'%i]) #hi
+            values[i],caches[i] = relu_forward(values[i+k]) #relui
         scores = values[self.num_layers+k]
+
+        # print(k,values.keys())
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
@@ -287,26 +288,43 @@ class FullyConnectedNet(object):
         dW = {}
         db = {}
         s = 0
+        # print(self.num_layers+k)
         loss, d[self.num_layers+k] = softmax_loss(scores, y)
 
         # loss, dscores = softmax_loss(scores, y)
-        # drelu, dW2, db2 = affine_backward(dscores, scores_cache)
-        # dhi = relu_backward(drelu, relu_cache)
-        # dX, dW1, db1 = affine_backward(dhi, hi_cache)
+        # h3 = scores, dh3 = dscores
+        # drelu3, dW3, db3 = affine_backward(dh3, h3_cache)
+        # dh2 = relu_backward(drelu3, relu_cache3)
+        # drelu2, dW2, db2 = affine_backward(dh2, h2_cache)
+        # dh1 = relu_backward(drelu2, relu_cache2)
+        # dX, dW1, db1 = affine_backward(dh1, h1_cache)
 
+        for i in range(self.num_layers,0,-1):
+            # print(i)
+            d[i-1],dW[i],grads["b%d"%i] = affine_backward(d[k+i],caches[k+i])
+            W = self.params['W%d'%i]
+            loss += self.reg*0.5*np.sum(W*W)
+            dW[i] += self.reg*W
+            grads["W%d"%i] = dW[i]
+            if i-1 == 0: break
+            d[k+i-1] = relu_backward(d[i-1],caches[i-1])
 
-        # for i in range(self.num_layers-1,0,-1):
+        # print(d.keys(),dW.keys())
+
+            
+
+        # for i in range(self.num_layers,0,-1):
         #     print(i,d[k+i].shape)
         #     d[i],dW[i],db[i] = affine_backward(d[k+i],caches[k+i])
         #     print(i,d[i].shape,caches[i].shape)
         #     d[k+i-1] = relu_backward(d[i],caches[i])
 
-        for i in range(self.num_layers):
-            W = self.params['W%d'%(i+1)]
-            s+=np.sum(W*W)
+        # for i in range(self.num_layers):
+        #     W = self.params['W%d'%(i+1)]
+        #     s+=np.sum(W*W)
         #     dW[i] += self.reg*W
         
-        loss += self.reg*0.5*s
+        # loss += self.reg*0.5*s
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
