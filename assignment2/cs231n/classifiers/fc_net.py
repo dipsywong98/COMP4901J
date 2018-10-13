@@ -192,6 +192,11 @@ class FullyConnectedNet(object):
         for i in range(len(self.dims)-1):
             self.params['W%d'%(i+1)] = np.random.normal(scale=weight_scale,size=(self.dims[i],self.dims[i+1]))
             self.params['b%d'%(i+1)] = np.zeros(self.dims[i+1])
+            if self.use_batchnorm:
+                print('bn %d'%(i+1))
+                self.params['beta%d'%(i+1)] = np.zeros([self.dims[i+1]])
+                self.params['gamma%d'%(i+1)] = np.ones([self.dims[i+1]])
+
         # print(self.params['W1'].shape,self.params['W2'].shape)
         ############################################################################
         #                             END OF YOUR CODE                             #
@@ -253,14 +258,16 @@ class FullyConnectedNet(object):
         pass
         h_caches = {}
         r_caches = {}
-        h_values = {}
-        r_values = {}
-        r_values[0] = X.reshape(X.shape[0],-1)
+        bn_caches = {}
+        value = X.reshape(X.shape[0],-1)
         k=self.num_layers//2+4
         for i in range(1,self.num_layers+1,1):
-            h_values[i],h_caches[i] = affine_forward(r_values[i-1],self.params['W%d'%i],self.params['b%d'%i]) #hi
-            r_values[i],r_caches[i] = relu_forward(h_values[i]) #relui
-        scores = h_values[self.num_layers]
+            value,h_caches[i] = affine_forward(value,self.params['W%d'%i],self.params['b%d'%i]) #affine
+            if i == self.num_layers: break
+            if self.use_batchnorm and i < self.num_layers:
+                value,bn_caches[i] = batchnorm_forward(value,self.params['gamma%d'%i],self.params['beta%d'%i],self.bn_params[i-1])
+            value,r_caches[i] = relu_forward(value) #relui
+        scores = value
 
         # print(k,values.keys())
         ############################################################################
@@ -286,13 +293,13 @@ class FullyConnectedNet(object):
         # of 0.5 to simplify the expression for the gradient.                      #
         ############################################################################
         pass
-        dh = {}
-        dr = {}
-        dW = {}
-        db = {}
+        # dh = {}
+        # dr = {}
+        # dW = {}
+        # db = {}
         s = 0
         # print(self.num_layers+k)
-        loss, dh[self.num_layers] = softmax_loss(scores, y)
+        loss, d = softmax_loss(scores, y)
 
         # loss, dscores = softmax_loss(scores, y)
         # h3 = scores, dh3 = dscores
@@ -301,16 +308,23 @@ class FullyConnectedNet(object):
         # drelu2, dW2, db2 = affine_backward(dh2, h2_cache)
         # dh1 = relu_backward(drelu2, relu_cache2)
         # dX, dW1, db1 = affine_backward(dh1, h1_cache)
+        d, dW, db = affine_backward(d, h_caches[self.num_layers])
 
-        for i in range(self.num_layers,0,-1):
+        grads['W'+str(self.num_layers)] = dW + self.reg*self.params['W'+str(self.num_layers)]
+        grads['b'+str(self.num_layers)] = db
+
+        # print(self.num_layers)
+        for i in range(self.num_layers-1,0,-1):
             # print(i)
-            dr[i-1],dW[i],grads["b%d"%i] = affine_backward(dh[i],h_caches[i])
+            d = relu_backward(d,r_caches[i])
+            if self.use_batchnorm:
+                # print('grad bn %d'%(i))
+                d, grads["gamma%i"%(i)], grads["beta%i"%(i)] = batchnorm_backward_alt(d,bn_caches[i])
+            d,dW,grads["b%d"%i] = affine_backward(d,h_caches[i])
             W = self.params['W%d'%i]
             loss += self.reg*0.5*np.sum(W*W)
-            dW[i] += self.reg*W
-            grads["W%d"%i] = dW[i]
-            if i-1 == 0: break
-            dh[i-1] = relu_backward(dr[i-1],r_caches[i-1])
+            dW += self.reg*W
+            grads["W%d"%i] = dW
 
         # print(d.keys(),dW.keys())
 
