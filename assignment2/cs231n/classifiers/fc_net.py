@@ -192,8 +192,8 @@ class FullyConnectedNet(object):
         for i in range(len(self.dims)-1):
             self.params['W%d'%(i+1)] = np.random.normal(scale=weight_scale,size=(self.dims[i],self.dims[i+1]))
             self.params['b%d'%(i+1)] = np.zeros(self.dims[i+1])
-            if self.use_batchnorm:
-                print('bn %d'%(i+1))
+            if self.use_batchnorm and i+1 < len(self.dims)-1:
+                # print('bn %d'%(i+1))
                 self.params['beta%d'%(i+1)] = np.zeros([self.dims[i+1]])
                 self.params['gamma%d'%(i+1)] = np.ones([self.dims[i+1]])
 
@@ -308,23 +308,19 @@ class FullyConnectedNet(object):
         # drelu2, dW2, db2 = affine_backward(dh2, h2_cache)
         # dh1 = relu_backward(drelu2, relu_cache2)
         # dX, dW1, db1 = affine_backward(dh1, h1_cache)
-        d, dW, db = affine_backward(d, h_caches[self.num_layers])
 
-        grads['W'+str(self.num_layers)] = dW + self.reg*self.params['W'+str(self.num_layers)]
-        grads['b'+str(self.num_layers)] = db
-
-        # print(self.num_layers)
-        for i in range(self.num_layers-1,0,-1):
+        for i in range(self.num_layers,0,-1):
             # print(i)
-            d = relu_backward(d,r_caches[i])
-            if self.use_batchnorm:
-                # print('grad bn %d'%(i))
-                d, grads["gamma%i"%(i)], grads["beta%i"%(i)] = batchnorm_backward_alt(d,bn_caches[i])
             d,dW,grads["b%d"%i] = affine_backward(d,h_caches[i])
             W = self.params['W%d'%i]
             loss += self.reg*0.5*np.sum(W*W)
             dW += self.reg*W
             grads["W%d"%i] = dW
+            if i-1 == 0: break
+            d = relu_backward(d,r_caches[i-1])
+            if self.use_batchnorm:
+                # print('grad bn %d'%(i-1))
+                d, grads["gamma%i"%(i-1)], grads["beta%i"%(i-1)] = batchnorm_backward_alt(d,bn_caches[i-1])
 
         # print(d.keys(),dW.keys())
 
