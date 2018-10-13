@@ -259,6 +259,7 @@ class FullyConnectedNet(object):
         h_caches = {}
         r_caches = {}
         bn_caches = {}
+        do_caches = {}
         value = X.reshape(X.shape[0],-1)
         k=self.num_layers//2+4
         for i in range(1,self.num_layers+1,1):
@@ -267,6 +268,8 @@ class FullyConnectedNet(object):
             if self.use_batchnorm and i < self.num_layers:
                 value,bn_caches[i] = batchnorm_forward(value,self.params['gamma%d'%i],self.params['beta%d'%i],self.bn_params[i-1])
             value,r_caches[i] = relu_forward(value) #relui
+            if self.use_dropout:
+                value,do_caches[i] = dropout_forward(value, self.dropout_param)
         scores = value
 
         # print(k,values.keys())
@@ -317,6 +320,8 @@ class FullyConnectedNet(object):
             dW += self.reg*W
             grads["W%d"%i] = dW
             if i-1 == 0: break
+            if self.use_dropout:
+                d = dropout_backward(d,do_caches[i-1])
             d = relu_backward(d,r_caches[i-1])
             if self.use_batchnorm:
                 # print('grad bn %d'%(i-1))
