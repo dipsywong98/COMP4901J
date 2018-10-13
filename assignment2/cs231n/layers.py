@@ -417,6 +417,26 @@ def conv_forward_naive(x, w, b, conv_param):
     # Hint: you can use the function np.pad for padding.                      #
     ###########################################################################
     pass
+    pad = conv_param.get('pad')
+    stride = conv_param.get('stride')
+
+    N, C, H, W = x.shape
+    F, C, HH, WW = w.shape
+
+    px = (np.pad(x, ((0, 0), (0, 0), (pad, pad), (pad, pad)), 'constant'))
+
+    out_H = np.int(((H + 2*pad - HH) / stride) + 1)
+    out_W = np.int(((W + 2*pad - WW) / stride) + 1)
+
+    out = np.zeros([N, F, out_H, out_W])
+
+    for X in range(N):  #for each image
+        for m in range(F): #for each mask
+            for oi in range(out_H): #for each pixel in output
+                for oj in range(out_W):
+                    out[X,m,oi,oj] = np.sum(w[m]*px[ X , : , oi*stride:oi*stride+HH, oj*stride:oj*stride+WW]) + b[m]
+
+
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -442,6 +462,38 @@ def conv_backward_naive(dout, cache):
     # TODO: Implement the convolutional backward pass.                        #
     ###########################################################################
     pass
+
+    x,w,b,conv_param = cache
+    pad = conv_param.get('pad')
+    stride = conv_param.get('stride')
+
+    N, C, H, W = x.shape
+    F, C, HH, WW = w.shape
+
+    out_H = np.int(((H + 2*pad - HH) / stride) + 1)
+    out_W = np.int(((W + 2*pad - WW) / stride) + 1)
+
+    px = (np.pad(x, ((0, 0), (0, 0), (pad, pad), (pad, pad)), 'constant'))
+
+    dw = np.zeros(w.shape)
+    for X in range(N):  #for each image
+        for m in range(F): #for each mask
+            for oi in range(out_H): #for each pixel in output
+                for oj in range(out_W):
+                    dw[m] += dout[X,m,oi,oj] * px[ X , : , oi*stride:oi*stride+HH, oj*stride:oj*stride+WW]
+
+    dpx = np.zeros(px.shape)
+    for X in range(N):  #for each image
+        for m in range(F): #for each mask
+            for oi in range(out_H): #for each pixel in output
+                for oj in range(out_W):
+                    dpx[X , : , oi*stride:oi*stride+HH, oj*stride:oj*stride+WW] += dout[X,m,oi,oj] * w[m]
+    dx = dpx[:,:,pad:-pad, pad: -pad]
+
+    db = np.zeros(b.shape)
+    for m in range(F):
+        db[m] = np.sum(dout[:,m])
+
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -468,6 +520,25 @@ def max_pool_forward_naive(x, pool_param):
     # TODO: Implement the max pooling forward pass                            #
     ###########################################################################
     pass
+    pool_height = pool_param.get('pool_height')
+    pool_width = pool_param.get('pool_width')
+    stride = pool_param.get('stride')
+
+    N, C, H, W = x.shape
+
+    # Calculate output spatial dimensions.
+    out_H = np.int(((H - pool_height) / stride) + 1)
+    out_W = np.int(((W - pool_width) / stride) + 1)
+
+    # Initialise output.
+    out = np.zeros([N, C, out_H, out_W])
+
+    for n in range(N):
+        for c in range(C):
+            for oi in range(out_H):
+                for oj in range(out_W):
+                    out[n,c,oi,oj] = np.max(x[n, c, oi*stride:oi*stride+pool_height, oj*stride: oj*stride+pool_width])
+
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -491,6 +562,28 @@ def max_pool_backward_naive(dout, cache):
     # TODO: Implement the max pooling backward pass                           #
     ###########################################################################
     pass
+    x,pool_param = cache
+
+    pool_height = pool_param.get('pool_height')
+    pool_width = pool_param.get('pool_width')
+    stride = pool_param.get('stride')
+
+    N, C, H, W = x.shape
+
+    # Calculate output spatial dimensions.
+    out_H = np.int(((H - pool_height) / stride) + 1)
+    out_W = np.int(((W - pool_width) / stride) + 1)
+
+    dx = np.zeros(x.shape)
+
+    for n in range(N):
+        for c in range(C):
+            for oi in range(out_H):
+                for oj in range(out_W):
+                    part = x[n, c, oi*stride:oi*stride+pool_height, oj*stride: oj*stride+pool_width]
+                    dx[n, c, oi*stride:oi*stride+pool_height, oj*stride: oj*stride+pool_width] = dout[n,c,oi,oj]*(np.max(part)==part)
+
+
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
