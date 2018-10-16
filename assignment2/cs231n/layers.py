@@ -295,12 +295,13 @@ def batchnorm_backward_alt(dout, cache):
     dbeta = np.sum(dout,axis=0)
     dgamma = np.sum(n*dout,axis=0)
 
-    dx1 = g*ivar*(dout - (1/N)* np.sum(dout*xmu, axis=0)*np.square(ivar) * xmu)
-
-    dx2 = (-1/N)*np.sum(dx1, axis=0)
-    # print(dx1.shape,dx2.shape,dout.shape)
-    dx = dx2 + dx1
+    # dx1 = g*ivar*(dout - (1/N)* np.sum(dout*xmu, axis=0)*np.square(ivar) * xmu)
+    # dx2 = (-1/N)*np.sum(dx1, axis=0)
+    # dx = dx2 + dx1
     
+    # Alternative faster formula way of calculating dx. ref: http://cthorey.github.io./backpropagation/
+    dx =(1 / N) * g * 1/sqrt_var * ((N * dout) - np.sum(dout, axis=0) - xmu * np.square(ivar) * np.sum(dout * (xmu), axis=0))
+
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
