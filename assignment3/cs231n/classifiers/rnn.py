@@ -138,6 +138,35 @@ class CaptioningRNN(object):
         # gradients for self.params[k].                                            #
         ############################################################################
         pass
+        x0, cache_x0 = affine_forward(features,W_proj, b_proj)
+        x1, cache_x1 = word_embedding_forward(captions_in,W_embed)
+        if(self.cell_type == 'rnn'):
+          x2, cache_x2 = rnn_forward(x1,x0,Wx,Wh,b)
+        elif(self.cell_type =='lstm'):
+          x2, cache_x2 = lstm_forward(x1,x0,Wx,Wh,b)
+
+        x3, cache_x3 = temporal_affine_forward(x2,W_vocab,b_vocab)
+        x4, dx3 = temporal_softmax_loss(x3,captions_out,mask)
+        loss = x4
+
+        # BACK
+
+        dx2, dW_vocab, db_vocab = temporal_affine_backward(dx3,cache_x3)
+        if(self.cell_type == 'rnn'):
+          dx1, dx0, dWx, dWh, db = rnn_backward(dx2,cache_x2)
+        elif(self.cell_type == 'lstm'):
+          dx1, dx0, dWx, dWh, db = lstm_backward(dx2,cache_x2)
+
+        dW_embed = word_embedding_backward(dx1,cache_x1)
+        dfeatures, dW_proj, db_proj = affine_backward(dx0,cache_x0)
+
+        grads["W_proj"], grads["b_proj"] = dW_proj, db_proj
+        grads["W_embed"] = dW_embed
+        grads["Wx"], grads["Wh"], grads["b"] = dWx, dWh, db
+        grads["W_vocab"], grads["b_vocab"] = dW_vocab, db_vocab
+
+
+
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
